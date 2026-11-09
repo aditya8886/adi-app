@@ -120,7 +120,7 @@
     return new Promise(resolve => {
       const el = document.createElement("div"); el.id = "auth";
       el.innerHTML = `<div class="au-card">
-        <div class="au-logo">Adi</div>
+        <div class="au-logo">adi</div>
         <p class="au-sub">Share photos, clips and moments with your people.</p>
         <div class="au-tabs" role="tablist"><button type="button" data-m="up" aria-selected="true">Create account</button><button type="button" data-m="in" aria-selected="false">Log in</button></div>
         <form id="au-f" novalidate>

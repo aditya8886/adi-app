@@ -534,7 +534,7 @@ h3.h .i{width:18px;height:18px;vertical-align:-3px;color:var(--accent)}
 .chat-who .av,.chat-who .gav{width:40px;height:40px;flex:none}
 .chat-who .gav .av{width:28px!important;height:28px!important}
 .who b .dosti{display:inline-flex}
-.msgs{display:flex;flex-direction:column;gap:2px;min-height:45vh;padding-top:4px}
+.msgs{display:flex;flex-direction:column;gap:2px;min-height:calc(100dvh - 320px - env(safe-area-inset-bottom,0px));padding-top:4px}
 .msg{max-width:78%;padding:8px 12px;border-radius:6px 18px 18px 6px;background:var(--soft);align-self:flex-start;overflow-wrap:anywhere;white-space:pre-wrap;font-size:15px;line-height:1.4}
 .msg.first{border-top-left-radius:18px;margin-top:6px}.msg.last{border-bottom-left-radius:18px}
 .msg.me{align-self:flex-end;background:var(--grad);color:#fff;border-radius:18px 6px 6px 18px}
@@ -609,7 +609,7 @@ details.more .kpis{padding-bottom:14px}details.more .kpi{background:var(--surfac
 /* ===== web: sign-in screen ===== */
 #auth{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;padding:20px 16px;overflow:auto;background:radial-gradient(120% 80% at 20% 0%,#ff9a3c33,transparent 60%),radial-gradient(120% 80% at 100% 100%,#ff2e6333,transparent 60%),var(--bg,#fff)}
 .au-card{width:100%;max-width:380px;display:flex;flex-direction:column;gap:14px;background:var(--surface,#fff);border:1px solid var(--line,#e6e6e6);border-radius:24px;padding:26px 20px;box-shadow:0 20px 50px -20px rgba(0,0,0,.25)}
-.au-logo{font-size:44px;font-weight:900;letter-spacing:-.04em;text-align:center;background:linear-gradient(135deg,#ff9a3c,#ff2e63);-webkit-background-clip:text;background-clip:text;color:transparent}
+.au-logo{font-family:var(--display);font-size:56px;font-weight:800;letter-spacing:-.05em;line-height:1;text-align:center;background:var(--grad,linear-gradient(135deg,#ff9a3c,#ff2e63));-webkit-background-clip:text;background-clip:text;color:transparent}
 .au-sub{margin:-8px 0 0;text-align:center;color:var(--muted,#666);font-size:15px}
 .au-tabs{display:grid;grid-template-columns:1fr 1fr;background:var(--soft,#f2f2f4);border-radius:14px;padding:4px}
 .au-tabs button{border:0;background:none;padding:10px;border-radius:11px;font:inherit;font-weight:700;color:var(--muted,#666);cursor:pointer}
@@ -1423,7 +1423,7 @@ function openNewChat(){
 }
 function openMembers(tid){ const t=threadById(tid); if(!t) return; const ids=t.members.includes("*") ? Object.keys(S.users) : t.members;
   openSheet(`<h3>${esc(threadName(t))}</h3><div class="note">${t.members.includes("*")?"Everyone on Adi is in this group.":`${ids.length} people`}</div>${ids.filter(id=>U(id)||id===S.meId).map(id=>`<button class="nc-p" data-profile="${esc(id)}"><img class="av" src="${esc(avatar(id))}" alt=""><span class="who"><b>${id===S.meId?"You":esc(name(id))}${demoTag(id)}</b><span>${handleOf(id)?"@"+esc(handleOf(id)):""}</span></span></button>`).join("")}<button class="btn ghost" data-close>Close</button>`, "members"); }
-function openPrivInfo(){ openSheet(`<h3>About chats in this test</h3><div class="note" style="font-size:14.5px;line-height:1.55">In this test version, chats are saved like posts, so anyone added to Adi could read them. Please don't send anything personal, like phone numbers, addresses or passwords.<br><br>The real Adi app will have end-to-end encrypted chats that only you and the people in the chat can read.</div><button class="btn" data-close>Got it</button>`, "priv"); }
+function openPrivInfo(){ openSheet(`<h3>Your chats are private</h3><div class="note" style="font-size:14.5px;line-height:1.55">Only the people in a chat can read it. Adi's database blocks everyone else. The Adi Community group is open to everyone on Adi.<br><br>This is still a test version, so please don't send passwords, OTPs or bank details in any chat.</div><button class="btn" data-close>Got it</button>`, "priv"); }
 function openNewDeal(){
   openSheet(`<h3>Post a brand deal</h3><div class="note">Only Adi's admins can post deals in this test version.</div>
     <label class="f">Brand<input type="text" id="d-b" maxlength="40"></label>
@@ -1676,7 +1676,8 @@ function dealsView(){
 const chatTime = t => { const d=dayKey(t); return d===dayKey() ? hm(t) : d===dayKey(Date.now()-DAY) ? "Yesterday" : new Date(t).toLocaleDateString("en-IN",{day:"numeric",month:"short"}); };
 const isGroup = t => t.members.includes("*") || t.members.length>2;
 const unreadIn = t => { const seen=(S.priv.chatSeen||{})[t.id]||0; return msgsIn(t.id).filter(m=>m.from!==S.meId && m.at>seen).length; };
-function threadAv(t){ const o=threadOthers(t);
+const ADI_AV="data:image/svg+xml,"+encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 80'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='#ff9a3c'/><stop offset='1' stop-color='#ff2e63'/></linearGradient></defs><rect width='80' height='80' fill='url(#g)'/><text x='40' y='50' font-family='Arial,sans-serif' font-size='27' font-weight='800' fill='#fff' text-anchor='middle'>adi</text></svg>");
+function threadAv(t){ const o=threadOthers(t); if(t.members.includes("*")) return `<img class="av" src="${ADI_AV}" alt="">`;
   if(!isGroup(t)) return `<img class="av" src="${esc(avatar(o[0]||S.meId))}" alt="">`;
   const ids=(t.members.includes("*") ? [t.by, ...Object.keys(S.users).filter(x=>x!==t.by && x!==S.meId)] : t.members.filter(x=>x!==S.meId)).slice(0,2);
   return `<span class="gav">${ids.map(id=>`<img class="av" src="${esc(avatar(id))}" alt="">`).join("")}</span>`; }
@@ -1694,7 +1695,7 @@ function chatsView(){
     ${all?`<div class="chips" role="tablist">${[["all","All"],["unread",`Unread${nUn?" · "+nUn:""}`],["groups",`Groups${nGr?" · "+nGr:""}`]].map(([k,l])=>`<button class="chip" data-chatf="${k}" aria-pressed="${S.chatF===k}">${l}</button>`).join("")}</div>`:""}
     <div class="threads">${ts.map(row).join("") || (all ? `<div class="empty"><strong>${q?"No chats match":S.chatF==="unread"?"All caught up":"No group chats yet"}</strong><span>${q?"Try another name or word.":S.chatF==="unread"?"You've read every message.":"Start a group from New chat by picking 2 or more people."}</span></div>`
       : `<div class="empty"><strong>No chats yet</strong><span>Message a friend, or make a group for your gang.</span><button class="btn" id="newchat2">Start a chat</button></div>`)}</div>
-    <button class="privline" data-privinfo="1">${ic("lock")}<span>Test version: chats aren't private yet</span><em>Why?</em></button>`;
+    <button class="privline" data-privinfo="1">${ic("lock")}<span>Chats are private to the people in them</span><em>How?</em></button>`;
 }
 function chatView(){
   const t=threadById(S.chat); if(!t || !inThread(t)) return `<button class="btn ghost sm" data-go="chats" style="align-self:flex-start">${ic("back")}Gupshup</button><div class="empty"><strong>Chat not found</strong></div>`;
@@ -2255,7 +2256,7 @@ i18n();
     const next={}; snap.docs.forEach(d=>{ if(d.exists) next[d.id]=d.data(); }); S.raw=next; applyUsers();
     if(!snap.metadata.fromCache){ clearTimeout(timer); S.slow=false; }
     S.loaded=true; if(!$("#sheet")) render(); refreshProfiles();
-    if(!S.autoJoin && snap.docs.length && !next[S.meId]){ S.autoJoin=true; setTimeout(()=>{ if(!mine()) join(); }, 400); }
+    if(!S.autoJoin && !next[S.meId]){ S.autoJoin=true; setTimeout(()=>{ if(!mine()) join(); }, 400); }
   }, err => { clearTimeout(timer); S.loaded=true; S.failed = "Adi couldn't load posts right now. Check your connection and reload."; render(); });
   db.doc("data/users/"+S.meId+"/prefs").onSnapshot(s => { if(s.exists && !s.metadata.hasPendingWrites){ S.priv={saved:[], seen:{}, lastActivity:0, hidden:[], blocked:[], muted:[], ...s.data()}; applyUsers(); if(S.loaded && !$("#sheet")) render(); } }, ()=>{});
   refreshProfiles();
