@@ -1,0 +1,6 @@
+{
+  // Cloudflare serves the static app in ./public. No build step.
+  "name": "adi-app",
+  "compatibility_date": "2025-01-01",
+  "assets": { "directory": "./public", "not_found_handling": "single-page-application" }
+}
