@@ -1,8 +1,7 @@
 name: Publish Adi
-# Every push to main puts the app in ./public live on GitHub Pages.
+# Puts the app in ./public live on GitHub Pages. Run by hand for now; turn on
+# Settings > Pages > Source: GitHub Actions first, then add `push: branches: [main]` here.
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
