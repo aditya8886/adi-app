@@ -1,6 +1,6 @@
 // Adi service worker: keeps the app shell on the phone so it opens fast and shows something offline.
 // Data and sign-in always go to Supabase live; only the app's own files are cached.
-const V = "adi-v2";
+const V = "adi-v3";
 const SHELL = ["./", "index.html", "config.js", "supabase.js", "adi-shim.js", "demo-media.js", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(V).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== V).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
@@ -14,4 +14,13 @@ self.addEventListener("fetch", e => {
   }
   // demo photos never change: cache first
   e.respondWith(caches.match(e.request).then(r => r || fetch(e.request).then(res => { if (res.ok) { const c = res.clone(); caches.open(V).then(x => x.put(e.request, c)); } return res; })));
+});
+// tapping a phone notification opens Adi on the right chat or Updates page
+self.addEventListener("notificationclick", e => {
+  e.notification.close();
+  const go = (e.notification.data && e.notification.data.go) || "activity";
+  e.waitUntil(self.clients.matchAll({type:"window", includeUncontrolled:true}).then(list => {
+    for (const c of list) { if ("focus" in c) { c.postMessage({go}); return c.focus(); } }
+    return self.clients.openWindow("./#n-" + encodeURIComponent(go));
+  }));
 });
