@@ -1382,6 +1382,9 @@ function openSettings(){
     <label class="f">Muted words<input type="text" id="s-mute" maxlength="300" placeholder="e.g. cricket score, spoiler" value="${esc((S.priv.muted||[]).join(", "))}"></label>
     <div class="note">Posts and replies with these words are hidden from you. Separate words with commas.</div>
     ${(S.priv.blocked||[]).length?`<div><b>Blocked</b>${S.priv.blocked.map(id=>`<div class="person"><span class="who"><b>${esc(S.raw[id]?.displayName||(S.raw[id]?.handle?"@"+S.raw[id].handle:"Someone on Adi"))}</b></span><button class="btn ghost sm" data-unblock="${esc(id)}">Unblock</button></div>`).join("")}</div>`:""}
+    ${S.canEdit?`<div class="note" style="font-weight:800;letter-spacing:.06em;margin-top:4px">ADMIN</div>
+    <button class="dropslim" id="s-report">${ic("chart")}<b>App report</b><span>Sign-ups, posts, chats and the demo week</span><em>›</em></button>
+    <button class="dropslim" id="s-seed">${ic("users")}<b>${Object.keys(S.raw).some(isDemo)?"Refresh demo accounts":"Add demo accounts"}</b><span>6 example creators so Adi doesn't look empty</span><em>›</em></button>`:""}
     <div class="note" style="font-weight:800;letter-spacing:.06em;margin-top:4px">NOTIFICATIONS</div>
     <label class="row" style="justify-content:space-between"><span><b>Pop-up alerts</b><br><span class="note">Messages, loves, follows and shabashi.</span></span><input type="checkbox" id="s-non" ${pref("nOn",true)?"checked":""} style="width:22px;height:22px;accent-color:var(--accent)"></label>
     <label class="row" style="justify-content:space-between"><span><b>Alert sound</b></span><input type="checkbox" id="s-nsnd" ${pref("nSound",true)?"checked":""} style="width:22px;height:22px;accent-color:var(--accent)"></label>
@@ -1391,6 +1394,13 @@ function openSettings(){
     <div class="note">Logged in as ${esc(S.user?.email?.()||"")}</div>
     <button class="btn ghost" id="s-out">Log out</button>
     <button class="btn" data-close>Done</button>`, "settings");
+  const sr=$("#s-report"); if(sr) sr.onclick=()=>{ closeSheet(); setTimeout(openReport, 250); };
+  const sd=$("#s-seed"); if(sd) sd.onclick=async()=>{ sd.disabled=true; toast("Adding demo accounts…");
+    try{ const r=await fetch("demo-seed.json",{cache:"no-store"}), j=await r.json();
+      for(const [id,d] of Object.entries(j.users)){ const cur=S.raw[id]; await S.db.doc("users/"+id).set(cur ? {...d, posts:[...(d.posts||[]), ...(cur.posts||[]).filter(p=>String(p.id).startsWith("dq-"))], likes:{...(cur.likes||{}), ...d.likes}, comments:[...(d.comments||[]), ...(cur.comments||[]).filter(c=>!(d.comments||[]).some(x=>x.id===c.id))]} : d); }
+      if(!S.deals.length) await S.db.doc("board/deals").set(j.deals);
+      closeSheet(); toast("Demo accounts added 🎉 They show a Demo label."); }
+    catch(e){ sd.disabled=false; toast("Couldn't add them. Only the admin can do this."); } };
   $("#s-non").onchange=e=>{ setPref("nOn", e.target.checked); toast(e.target.checked?"Pop-up alerts on.":"Pop-up alerts off."); };
   $("#s-nsnd").onchange=e=>{ setPref("nSound", e.target.checked); if(e.target.checked) nSound("msg"); };
   const np=$("#s-nperm"); if(np) np.onclick=async()=>{ let r="denied"; try{ r=await Notification.requestPermission(); }catch(e){} closeSheet(); toast(r==="granted"?"Phone notifications on 🔔":"Notifications weren't allowed. You can change this in your browser settings."); };
@@ -1878,6 +1888,23 @@ function nAskLater(){
       <button class="btn" id="n-yes">Turn on notifications</button><button class="btn ghost" data-close>Not now</button></div>`, "nask");
     $("#n-yes").onclick=async()=>{ let r="denied"; try{ r=await Notification.requestPermission(); }catch(e){} closeSheet(); toast(r==="granted"?"Notifications on 🔔 You'll get a ping for new messages.":"No problem. You can turn them on in Settings any time."); };
   }, 25000);
+}
+function openReport(){
+  const all=Object.entries(S.raw), real=all.filter(([id,u])=>!u.demo), demo=all.filter(([id,u])=>u.demo), now=Date.now();
+  const posts=real.flatMap(([id,u])=>(u.posts||[]).map(p=>({...p, by:id}))), dq=demo.flatMap(([id,u])=>(u.posts||[]).filter(p=>String(p.id).startsWith("dq-")));
+  const loves=real.reduce((n,[id,u])=>n+Object.keys(u.likes||{}).length,0), reps=real.reduce((n,[id,u])=>n+(u.comments||[]).length,0), follows=real.reduce((n,[id,u])=>n+(u.following||[]).length,0);
+  const joined=real.map(([id,u])=>u.joinedAt||0), d1=joined.filter(t=>now-t<DAY).length, d7=joined.filter(t=>now-t<7*DAY).length;
+  const active=real.filter(([id,u])=>[...(u.posts||[]).map(p=>p.at), ...Object.values(u.likes||{}).filter(v=>typeof v==="number"), ...(u.comments||[]).map(c=>c.at)].some(t=>now-t<DAY)).length;
+  const msgs=S.pmsg.filter(m=>!m._tmp), m1=msgs.filter(m=>now-m.at<DAY).length;
+  const top=real.map(([id,u])=>[id,(u.posts||[]).length]).filter(x=>x[1]).sort((a,b)=>b[1]-a[1]).slice(0,3);
+  const line=(l,v)=>`<div class="wline"><span>${l}</span><b>${v}</b></div>`;
+  const tick=dq.length;
+  openSheet(`<h3>App report</h3><div class="note">Live numbers from your database, as of ${hm(now)}.</div>
+    <div class="panel"><b>People</b>${line("Real accounts", real.length)}${line("Joined today", d1)}${line("Joined this week", d7)}${line("Active today", active)}</div>
+    <div class="panel"><b>Activity (real people)</b>${line("Posts", posts.length)}${line("Posts today", posts.filter(p=>now-p.at<DAY).length)}${line("Loves", loves)}${line("Replies", reps)}${line("Follows", follows)}${line("Messages you can see", msgs.length)}${line("Messages today", m1)}</div>
+    ${top.length?`<div class="panel"><b>Top posters</b>${top.map(([id,n])=>line(esc(name(id)), n+" posts")).join("")}</div>`:""}
+    <div class="panel"><b>Demo week</b>${demo.length?line("Demo accounts", demo.length)+line("Auto posts so far", `${tick} of 14`)+`<div class="note">${tick>=14?"Demo week finished.":tick?"Next auto post at 12 pm or 7 pm India time.":"Not started. Run the demo-week code in Supabase."}</div>`:`<div class="note">No demo accounts yet. Use Settings > Add demo accounts.</div>`}</div>
+    <button class="btn" data-close>Close</button>`, "report");
 }
 function activityView(){
   const raw=activity(), last=S.priv.lastActivity||0, groups=[], byPid={};
